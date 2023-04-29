@@ -71,7 +71,7 @@ where
             Ok(KeyValue {
                 key: parsed_bytes.key.into_owned().into(),
                 value: parsed_bytes.value.into_owned().into(),
-                timestamp: timestamp.into(),
+                timestamp,
             })
         } else {
             Err(DeserializeError {

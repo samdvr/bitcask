@@ -59,14 +59,13 @@ impl Serdes<KeyValue<Key, Value>> for KeyValue<Key, Value> {
     type SerializeErr = SerializeError;
 
     fn deserialize(input: &[u8]) -> Result<Self, DeserializeError> {
-        let (crc_bytes, timestamp_bytes, key_length, value_length, key, value) =
-            parse_input(input)?;
-        let expected_crc_bytes = calculate_crc(&key, &value);
-        if crc_bytes == expected_crc_bytes {
-            let timestamp = timestamp_bytes;
+        let parsed_bytes = parse_input(input)?;
+        let expected_crc_bytes = calculate_crc(&parsed_bytes.key, &parsed_bytes.value);
+        if parsed_bytes.crc_bytes == expected_crc_bytes {
+            let timestamp = parsed_bytes.timestamp_bytes;
             Ok(KeyValue {
-                key,
-                value,
+                key: parsed_bytes.key,
+                value: parsed_bytes.value,
                 timestamp,
             })
         } else {
@@ -88,9 +87,17 @@ impl Serdes<KeyValue<Key, Value>> for KeyValue<Key, Value> {
     }
 }
 
-fn parse_input(
-    input: &[u8],
-) -> Result<(Vec<u8>, Vec<u8>, usize, usize, Key, Value), DeserializeError> {
+#[derive(Debug, PartialEq, Clone)]
+struct ParsedBytes {
+    crc_bytes: Vec<u8>,
+    timestamp_bytes: Vec<u8>,
+    key_length: usize,
+    value_length: usize,
+    key: Key,
+    value: Value,
+}
+
+fn parse_input(input: &[u8]) -> Result<ParsedBytes, DeserializeError> {
     if input.len() < 16 {
         return Err(DeserializeError {
             message: String::from("Input too short"),
@@ -123,14 +130,14 @@ fn parse_input(
     let key = input[16..16 + key_length].to_vec();
     let value = input[16 + key_length..16 + key_length + value_length].to_vec();
 
-    Ok((
+    Ok(ParsedBytes {
         crc_bytes,
         timestamp_bytes,
         key_length,
         value_length,
         key,
         value,
-    ))
+    })
 }
 
 fn calculate_crc(key: &[u8], value: &[u8]) -> [u8; 4] {
@@ -143,7 +150,6 @@ fn calculate_crc(key: &[u8], value: &[u8]) -> [u8; 4] {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
 
     use super::*;
 
@@ -153,14 +159,14 @@ mod tests {
             0x0D, 0x4A, 0x11, 0x85, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05,
             0x00, 0x05, 0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x77, 0x6F, 0x72, 0x6C, 0x64,
         ];
-        let expected = (
-            vec![0x0D, 0x4A, 0x11, 0x85],
-            vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-            5,
-            5,
-            b"hello".to_vec(),
-            b"world".to_vec(),
-        );
+        let expected = ParsedBytes {
+            crc_bytes: vec![0x0D, 0x4A, 0x11, 0x85],
+            timestamp_bytes: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+            key_length: 5,
+            value_length: 5,
+            key: b"hello".to_vec(),
+            value: b"world".to_vec(),
+        };
         assert_eq!(parse_input(&input).unwrap(), expected);
     }
 

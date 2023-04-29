@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::convert::TryInto;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
@@ -64,8 +65,8 @@ impl Serdes<KeyValue<Key, Value>> for KeyValue<Key, Value> {
         if parsed_bytes.crc_bytes == expected_crc_bytes {
             let timestamp = parsed_bytes.timestamp_bytes;
             Ok(KeyValue {
-                key: parsed_bytes.key,
-                value: parsed_bytes.value,
+                key: parsed_bytes.key.into_owned(),
+                value: parsed_bytes.value.into_owned(),
                 timestamp,
             })
         } else {
@@ -88,13 +89,13 @@ impl Serdes<KeyValue<Key, Value>> for KeyValue<Key, Value> {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct ParsedBytes {
+struct ParsedBytes<'a> {
     crc_bytes: Vec<u8>,
     timestamp_bytes: Vec<u8>,
     key_length: usize,
     value_length: usize,
-    key: Key,
-    value: Value,
+    key: Cow<'a, [u8]>,
+    value: Cow<'a, [u8]>,
 }
 
 fn parse_input(input: &[u8]) -> Result<ParsedBytes, DeserializeError> {
@@ -127,8 +128,8 @@ fn parse_input(input: &[u8]) -> Result<ParsedBytes, DeserializeError> {
         });
     }
 
-    let key = input[16..16 + key_length].to_vec();
-    let value = input[16 + key_length..16 + key_length + value_length].to_vec();
+    let key = Cow::Borrowed(&input[16..16 + key_length]);
+    let value = Cow::Borrowed(&input[16 + key_length..16 + key_length + value_length]);
 
     Ok(ParsedBytes {
         crc_bytes,
@@ -164,8 +165,8 @@ mod tests {
             timestamp_bytes: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
             key_length: 5,
             value_length: 5,
-            key: b"hello".to_vec(),
-            value: b"world".to_vec(),
+            key: Cow::Owned(b"hello".to_vec()),
+            value: Cow::Owned(b"world".to_vec()),
         };
         assert_eq!(parse_input(&input).unwrap(), expected);
     }
@@ -182,7 +183,9 @@ mod tests {
     fn test_serialize_deserialize() {
         let kv = KeyValue {
             key: b"hello".to_vec(),
-            value: b"world".to_vec(),
+            value: b"world
+            "
+            .to_vec(),
             timestamp: vec![0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68],
         };
 

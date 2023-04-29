@@ -7,13 +7,13 @@ use thiserror::Error;
 pub struct KeyValue<K, V> {
     pub key: K,
     pub value: V,
-    pub timestamp: V,
+    pub timestamp: Vec<u8>,
 }
 
 impl<K, V> KeyValue<K, V>
 where
-    K: AsRef<[u8]> + From<Vec<u8>>,
-    V: AsRef<[u8]> + From<Vec<u8>>,
+    K: AsRef<[u8]>,
+    V: AsRef<[u8]>,
 {
     pub fn new(key: K, value: V) -> Self {
         let millis = SystemTime::now()
@@ -30,7 +30,7 @@ where
         Self {
             key,
             value,
-            timestamp: V::from(timestamp),
+            timestamp,
         }
     }
 }
@@ -83,7 +83,7 @@ where
     fn serialize(a: &Self) -> Result<Vec<u8>, SerializeError> {
         let mut buff = Vec::new();
         buff.extend(calculate_crc(a.key.as_ref(), a.value.as_ref()));
-        buff.extend(a.timestamp.as_ref());
+        buff.extend(&a.timestamp);
         buff.extend(&(a.key.as_ref().len() as u16).to_be_bytes());
         buff.extend(&(a.value.as_ref().len() as u16).to_be_bytes());
         buff.extend(a.key.as_ref().iter());

@@ -3,18 +3,19 @@ use std::convert::TryInto;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
-pub type Key = Vec<u8>;
-pub type Value = Vec<u8>;
-
 #[derive(Debug, PartialEq, Clone)]
 pub struct KeyValue<K, V> {
     pub key: K,
     pub value: V,
-    pub timestamp: Vec<u8>,
+    pub timestamp: V,
 }
 
-impl KeyValue<Key, Value> {
-    pub fn new<K: Into<Key>, V: Into<Value>>(key: K, value: V) -> Self {
+impl<K, V> KeyValue<K, V>
+where
+    K: AsRef<[u8]> + From<Vec<u8>>,
+    V: AsRef<[u8]> + From<Vec<u8>>,
+{
+    pub fn new(key: K, value: V) -> Self {
         let millis = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("error reading system time")
@@ -23,14 +24,13 @@ impl KeyValue<Key, Value> {
         let millis_bytes = millis.to_be_bytes();
         let mut timestamp = vec![0; 8];
 
-        // Copy millis_bytes into the last bytes of the timestamp vector
         let start_idx = timestamp.len().saturating_sub(millis_bytes.len());
         timestamp[start_idx..].copy_from_slice(&millis_bytes[8..]);
 
         Self {
-            key: key.into(),
-            value: value.into(),
-            timestamp,
+            key,
+            value,
+            timestamp: V::from(timestamp),
         }
     }
 }
@@ -55,7 +55,11 @@ pub struct SerializeError {
     pub message: String,
 }
 
-impl Serdes<KeyValue<Key, Value>> for KeyValue<Key, Value> {
+impl<K, V> Serdes<KeyValue<K, V>> for KeyValue<K, V>
+where
+    K: AsRef<[u8]> + From<Vec<u8>>,
+    V: AsRef<[u8]> + From<Vec<u8>>,
+{
     type DeserializeErr = DeserializeError;
     type SerializeErr = SerializeError;
 
@@ -65,9 +69,9 @@ impl Serdes<KeyValue<Key, Value>> for KeyValue<Key, Value> {
         if parsed_bytes.crc_bytes == expected_crc_bytes {
             let timestamp = parsed_bytes.timestamp_bytes;
             Ok(KeyValue {
-                key: parsed_bytes.key.into_owned(),
-                value: parsed_bytes.value.into_owned(),
-                timestamp,
+                key: parsed_bytes.key.into_owned().into(),
+                value: parsed_bytes.value.into_owned().into(),
+                timestamp: timestamp.into(),
             })
         } else {
             Err(DeserializeError {
@@ -78,12 +82,12 @@ impl Serdes<KeyValue<Key, Value>> for KeyValue<Key, Value> {
 
     fn serialize(a: &Self) -> Result<Vec<u8>, SerializeError> {
         let mut buff = Vec::new();
-        buff.extend(calculate_crc(&a.key, &a.value));
-        buff.extend(&a.timestamp);
-        buff.extend(&(a.key.len() as u16).to_be_bytes());
-        buff.extend(&(a.value.len() as u16).to_be_bytes());
-        buff.extend(a.key.iter());
-        buff.extend(a.value.iter());
+        buff.extend(calculate_crc(a.key.as_ref(), a.value.as_ref()));
+        buff.extend(a.timestamp.as_ref());
+        buff.extend(&(a.key.as_ref().len() as u16).to_be_bytes());
+        buff.extend(&(a.value.as_ref().len() as u16).to_be_bytes());
+        buff.extend(a.key.as_ref().iter());
+        buff.extend(a.value.as_ref().iter());
         Ok(buff)
     }
 }

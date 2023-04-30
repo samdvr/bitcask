@@ -1,21 +1,17 @@
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 use std::convert::TryInto;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct KeyValue<K, V> {
-    pub key: K,
-    pub value: V,
+pub struct KeyValue {
+    pub key: Vec<u8>,
+    pub value: Vec<u8>,
     pub timestamp: Vec<u8>,
 }
 
-impl<K, V> KeyValue<K, V>
-where
-    K: AsRef<[u8]>,
-    V: AsRef<[u8]>,
-{
-    pub fn new(key: K, value: V) -> Self {
+impl KeyValue {
+    pub fn new(key: Vec<u8>, value: Vec<u8>) -> Self {
         let millis = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("error reading system time")
@@ -55,11 +51,7 @@ pub struct SerializeError {
     pub message: String,
 }
 
-impl<K, V> Serdes<KeyValue<K, V>> for KeyValue<K, V>
-where
-    K: AsRef<[u8]> + From<Vec<u8>>,
-    V: AsRef<[u8]> + From<Vec<u8>>,
-{
+impl Serdes<KeyValue> for KeyValue {
     type DeserializeErr = DeserializeError;
     type SerializeErr = SerializeError;
 
@@ -71,7 +63,7 @@ where
             Ok(KeyValue {
                 key: parsed_bytes.key.into_owned().into(),
                 value: parsed_bytes.value.into_owned().into(),
-                timestamp,
+                timestamp: timestamp.into(),
             })
         } else {
             Err(DeserializeError {
@@ -84,10 +76,10 @@ where
         let mut buff = Vec::new();
         buff.extend(calculate_crc(a.key.as_ref(), a.value.as_ref()));
         buff.extend(&a.timestamp);
-        buff.extend(&(a.key.as_ref().len() as u16).to_be_bytes());
-        buff.extend(&(a.value.as_ref().len() as u16).to_be_bytes());
-        buff.extend(a.key.as_ref().iter());
-        buff.extend(a.value.as_ref().iter());
+        buff.extend(&(a.key.len() as u16).to_be_bytes());
+        buff.extend(&(a.value.len() as u16).to_be_bytes());
+        buff.extend(a.key.iter());
+        buff.extend(a.value.iter());
         Ok(buff)
     }
 }

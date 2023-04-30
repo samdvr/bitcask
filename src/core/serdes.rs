@@ -1,4 +1,4 @@
-use std::borrow::{Borrow, Cow};
+use std::borrow::{Cow};
 use std::convert::TryInto;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
@@ -61,9 +61,9 @@ impl Serdes<KeyValue> for KeyValue {
         if parsed_bytes.crc_bytes == expected_crc_bytes {
             let timestamp = parsed_bytes.timestamp_bytes;
             Ok(KeyValue {
-                key: parsed_bytes.key.into_owned().into(),
-                value: parsed_bytes.value.into_owned().into(),
-                timestamp: timestamp.into(),
+                key: parsed_bytes.key.into_owned(),
+                value: parsed_bytes.value.into_owned(),
+                timestamp,
             })
         } else {
             Err(DeserializeError {

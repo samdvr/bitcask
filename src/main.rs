@@ -1,5 +1,5 @@
 use std::io::{Seek, SeekFrom};
-use std::{collections::HashMap, io::Write};
+use std::{io::Write};
 
 mod core;
 
@@ -7,7 +7,7 @@ use std::fs::OpenOptions;
 
 use crate::core::serdes::{KeyValue, Serdes};
 
-use std::io::BufWriter;
+
 
 fn main() -> std::io::Result<()> {
     let kv = KeyValue::new(b"test_key2".to_vec(), b"test_value".to_vec());
@@ -23,7 +23,7 @@ fn main() -> std::io::Result<()> {
         .read(true)
         .open(data_file_path)?;
 
-    let offset = data_file.seek(SeekFrom::End(0))?;
+    let _offset = data_file.seek(SeekFrom::End(0))?;
     data_file.write_all(&serialized)?;
 
     Ok(())

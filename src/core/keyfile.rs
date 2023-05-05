@@ -46,7 +46,7 @@ impl BitcaskKeyFile {
             .truncate(true)
             .open(&self.file_path)?;
 
-        let buf_writer = BufWriter::new(file);
+        let mut buf_writer = BufWriter::new(file);
         let buf = serialize(&self.key_map)?;
         buf_writer.write_all(&buf)?;
 

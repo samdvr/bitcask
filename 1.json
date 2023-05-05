@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "enabled": true,
+  "notification": {
+    "email": ["email@apple.com"]
+  },
+  "selection": [
+    {
+      "IdiaSBS": {
+        "domain": "SBS_GEO",
+        "locale": "en_AU",
+        "device": "PHONE",
+        "expectedCount": 30000,
+        "startDate": "20230101",
+        "endDate": “20230331"
+      },
+      "selectionId":"en_AU"
+    }
+  ],
+  "output": {
+    "destination": "exampleTable",
+    "partitionColumns": ["date"], 
+    "sinkActions": "overwritePartitions"
+  },
+  "schedule": "monthly",
+  "scheduleStartDate": "20221013",
+  "scheduleEndDate": "20221014",
+  "id": "3213123", 
+  "name": "SBS_PHONE_en_AU_GEO"
+}

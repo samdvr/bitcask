@@ -7,7 +7,7 @@ use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct KeyMetadata {
+pub struct KeyMetadata {
     file_id: u32,
     offset: u64,
     size: u64,
@@ -30,7 +30,7 @@ impl BitcaskKeyFile {
         if Path::new(&self.file_path).exists() {
             let file = File::open(&self.file_path)?;
             let mut buf_reader = BufReader::new(file);
-            let mut buf = Vec::new();
+            let mut buf = Vec::with_capacity(buf_reader.capacity());
             buf_reader.read_to_end(&mut buf)?;
 
             self.key_map = deserialize(&buf)?;

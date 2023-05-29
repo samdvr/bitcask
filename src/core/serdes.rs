@@ -1,4 +1,4 @@
-use std::borrow::{Cow};
+use std::borrow::Cow;
 use std::convert::TryInto;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
@@ -73,7 +73,7 @@ impl Serdes<KeyValue> for KeyValue {
     }
 
     fn serialize(a: &Self) -> Result<Vec<u8>, SerializeError> {
-        let mut buff = Vec::new();
+        let mut buff = Vec::with_capacity((a.key.len() * 4) + a.value.len());
         buff.extend(calculate_crc(a.key.as_ref(), a.value.as_ref()));
         buff.extend(&a.timestamp);
         buff.extend(&(a.key.len() as u16).to_be_bytes());

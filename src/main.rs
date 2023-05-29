@@ -1,5 +1,5 @@
+use std::io::Write;
 use std::io::{Seek, SeekFrom};
-use std::{io::Write};
 
 mod core;
 
@@ -7,13 +7,12 @@ use std::fs::OpenOptions;
 
 use crate::core::serdes::{KeyValue, Serdes};
 
-
-
 fn main() -> std::io::Result<()> {
     let kv = KeyValue::new(b"test_key2".to_vec(), b"test_value".to_vec());
     let serialized: Vec<u8> = KeyValue::serialize(&kv).unwrap();
 
     let data_file_path = "data.bin";
+
     // todo: add key file updating here
 
     // Append serialized data to the data file and store the offset in the HashMap
